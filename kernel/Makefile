@@ -34,6 +34,14 @@ MODULESCRIPT = iosModules
 CFLAGS	+= $(INCLUDE)
 CXXFLAGS = $(CFLAGS)
 ASFLAGS += $(CFLAGS)
+
+#set CHAINLOAD=0 to build a kernel that does not reboot/chainload into boot2.
+#this is meant for development & testing (e.g. in an emulator) where
+#StarStruck itself needs to stay in control of the system.
+CHAINLOAD ?= 1
+ifeq ($(CHAINLOAD),0)
+CFLAGS += -DNO_CHAINLOAD
+endif
 LDFLAGS += -Wl,--no-warn-rwx-segments -L ../tools/ -T kernel.ld
 
 ifeq ($(NOMAPFILE),)

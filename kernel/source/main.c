@@ -261,6 +261,13 @@ void kernel_main(void)
 		Threads[threadId].Context.StatusRegister |= SPSR_SYSTEM_MODE;
 		StartThread(threadId);
 	}
+#ifdef NO_CHAINLOAD
+	//development & testing mode: stay in StarStruck instead of rebooting into HBC/boot2.
+	//this allows the kernel & its modules to be tested (e.g. in an emulator) without boot2 taking over.
+	printk("NO_CHAINLOAD defined: staying in StarStruck\n");
+	while (true)
+		YieldThread();
+#else
 	while (boot2_init() < 0) YieldThread();
 
 	/*while (1)
@@ -302,6 +309,7 @@ shutdown:
 	printk("Vectoring to 0x%08x...\n", vector);
 	//go to whatever address we got
 	asm("bx\t%0" : : "r"(vector));
+#endif
 }
 
 #endif
