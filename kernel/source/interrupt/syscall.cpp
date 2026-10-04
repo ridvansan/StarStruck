@@ -176,8 +176,8 @@ static const SyscallEntry syscall_handlers[] __attribute__((section(".syscalls")
 	SYSCALL(IOSC_GenerateBlockMACAsync), //0x006E
 	SYSCALL_NULL,                        //0x006F
 	SYSCALL_NULL,                        //0x0070
-	SYSCALL_NULL,                        //0x0071
-	SYSCALL_NULL,                        //0x0072
+	SYSCALL(IOSC_SetOwnership),          //0x0071
+	SYSCALL(IOSC_GetOwnership),          //0x0072
 	SYSCALL_NULL,                        //0x0073
 	SYSCALL_NULL,                        //0x0074
 	SYSCALL_NULL,                        //0x0075

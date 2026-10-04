@@ -1340,4 +1340,52 @@ s32 IOSC_ComputeSharedKey(u32 privateKeyHandle, u32 publicKeyHandle, u32 sharedK
 	return ret;
 }
 
+// Sets the ownership mask of a keyslot. The current process is always added
+// to the mask, so a process can hand out access to a key it owns.
+s32 IOSC_SetOwnership(u32 keyHandle, u32 pidMask)
+{
+	s32 ret = IPC_SUCCESS, keyRet = IPC_SUCCESS;
+	IOSC_BEGIN_SAFETY_WRAPPER(ret, keyRet)
+
+	do
+	{
+		// Only the owner of a key can hand out access to it
+		keyRet = IOSC_CheckCurrentProcessOwnsKey(keyHandle);
+		if (keyRet != IPC_SUCCESS)
+			break;
+
+		u32 owner = 0;
+		ret = Keyring_GetKeyOwnerProcess(keyHandle, &owner);
+		if (ret != IPC_SUCCESS)
+			break;
+
+		owner |= pidMask | (1 << (CurrentThread->ProcessId & 0xff));
+		ret = Keyring_SetKeyOwnerProcess(keyHandle, owner);
+	}
+	while (0);
+
+	IOSC_END_SAFETY_WRAPPER(ret, keyRet)
+	return ret;
+}
+
+// Returns the ownership mask of a keyslot.
+s32 IOSC_GetOwnership(u32 keyHandle, u32* ownershipOut)
+{
+	s32 ret = IPC_SUCCESS, keyRet = IPC_SUCCESS;
+	IOSC_BEGIN_SAFETY_WRAPPER(ret, keyRet)
+
+	do
+	{
+		ret = IOSC_CheckCurrentProcessCanReadWrite(ownershipOut, sizeof(u32));
+		if (ret != IPC_SUCCESS)
+			break;
+
+		ret = Keyring_GetKeyOwnerProcess(keyHandle, ownershipOut);
+	}
+	while (0);
+
+	IOSC_END_SAFETY_WRAPPER(ret, keyRet)
+	return ret;
+}
+
 #endif

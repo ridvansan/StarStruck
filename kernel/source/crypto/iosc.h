@@ -53,4 +53,6 @@ s32 IOSC_GenerateHash(const ShaContext* context, const void* inputData, const u3
 s32 IOSC_GenerateHashAsync(const ShaContext* context, const void* inputData, const u32 inputSize,
                            const u32 chain_flag, void* digest, const s32 messageQueueId, IpcMessage* message);
 s32 IOSC_ComputeSharedKey(u32 privateKeyHandle, u32 publicKeyHandle, u32 sharedKeyHandle);
+s32 IOSC_SetOwnership(u32 keyHandle, u32 pidMask);
+s32 IOSC_GetOwnership(u32 keyHandle, u32* ownershipOut);
 #endif

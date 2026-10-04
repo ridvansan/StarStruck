@@ -112,6 +112,8 @@ _SYSCALL OSIOSCDecryptAsync,		0x006A
 _SYSCALL OSIOSCDecrypt,				0x006B
 _SYSCALL OSIOSCGenerateBlockMAC,	0x006D
 _SYSCALL OSIOSCGenerateBlockMACAsync, 0x006E
+_SYSCALL OSIOSCSetOwnership,		0x0071
+_SYSCALL OSIOSCGetOwnership,		0x0072
 
 /* this is a special svc syscall. its the only syscall left in IOS. only used for printk too */
 .thumb
