@@ -87,11 +87,44 @@ Implemented on branch `feature/iosc-syscalls`.
 
 ## Still TODO (from decompilation)
 
-- `0x74 GenerateKey`: inner 0x13a70f0c -> `FUN_13a70db8` (likely hardware RNG
-  + `Keyring_SetKey`).
+- `0x74 GenerateKey`: inner 0x13a70f0c -> `FUN_13a70db8`:
+  - checks handle > 0xb, not root key, ownership, key type PrivateKey or
+    PublicAndPrivateKey, subtypes AES_128 / HMAC / ECC_233
+  - generates 0x1e (30) random bytes with `FUN_13a7381c`; for HMAC keys only
+    the first 0x14 bytes are used (rest zeroed); stores with Keyring_SetKey
+  - for PublicAndPrivateKey + ECC_233 it also derives the public key
+    (`FUN_13a75178`, ECC point multiplication)
+- `0x74` random source `FUN_13a7381c(out, size)` (AES-CTR DRBG):
+  - lazily inits a global PRNG key object (`FUN_13a737a4`)
+  - creates an AES-128 object (`IOSC_CreateObject(0,0)`), keys it from the
+    SEEPROM PRNG seed via the ImportSecretKey path
+  - for every 16-byte block: increments a global counter, builds the block
+    from a zeroed buffer + the counter, AES-encrypts it (`FUN_13a73184` =
+    `_IOSC_Encrypt`) and uses the ciphertext as random output
+  - deletes the AES object at the end
+  - StarStruck already has `IOSC_Information.rngSeed` (from
+    `SEEPROM_GetPRNGSeed`) and `_IOSC_Encrypt`, so this is implementable once
+    the exact counter/IV layout is confirmed from disassembly
 - `0x62 SetData`: inner 0x13a7113c special-cases key handles 7/8/9/10
-  (`DeviceKey`, `NandKey`, `Boot2Key`, ...) and otherwise checks the key type.
-- `0x6C` / `0x75` / `0x76` / `0x6F`: all go through ECC-233 math that StarStruck
-  does not have yet (the blocker for the remaining crypto syscalls).
-- `0x70 GetDeviceCertificate`: inner 0x13a71ac0 still to be analyzed (probably
-  reads/generates the device certificate from OTP/seeprom).
+  (DeviceKey / NandKey / Boot2Key / ...): keys of type >= 3? and subtypes use
+  hardware id/serial helpers, then sets 4-byte data via
+  `Keyring_SetKey`-style call.
+- `0x70 GetDeviceCertificate`: inner 0x13a71ac0 generates the device
+  certificate from the device private key (slot 0): reads the key, derives
+  its public part (`FUN_13a751b8`), builds/signs an ECC certificate
+  (`0xffff78fc`) and copies the 0x3c signature. **Needs ECC-233.**
+- `0x76 GenerateCertificate`: inner 0x13a71ab4 -> `FUN_13a718d8`. **Needs
+  ECC-233.**
+- `0x6C` / `0x75` / `0x6F`: all go through ECC-233 math that StarStruck does
+  not have yet (the blocker for the remaining crypto syscalls).
+
+Resolved inner helpers:
+
+| Addr | Function |
+|------|----------|
+| 0x13a71b98 | key type check helper (used by GenerateKey) |
+| 0x13a7381c | AES-CTR random byte generator |
+| 0x13a75178 | ECC derive public key (private -> public+private) |
+| 0x13a751b8 | ECC derive public key (device cert path) |
+| 0x13a771... | ECC arithmetic (point add/double/mul) - to map |
+| 0xffff78fc | certificate build/sign helper (kernel code) |
