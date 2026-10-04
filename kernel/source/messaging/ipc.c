@@ -387,6 +387,10 @@ void IpcInit(void)
 {
 	//init ipc interrupts
 	write32(HW_IPC_ARMCTRL, (IPC_ARM_IX1 | IPC_ARM_IX2));
+	//enable the ppc side ipc interrupt (real IOS does this during init as well)
+	write32(HW_PPCIRQMASK, (1 << IRQ_PPCIPC));
+	//send the initial ack to the PPC so it knows the ARM side is up and running
+	write32(HW_IPC_ARMCTRL, (IPC_ARM_IX1 | IPC_ARM_IX2 | IPC_ARM_ACK_OUT));
 	IpcInitMessageQueues();
 }
 
