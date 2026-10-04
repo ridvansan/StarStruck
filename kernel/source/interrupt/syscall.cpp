@@ -179,7 +179,7 @@ static const SyscallEntry syscall_handlers[] __attribute__((section(".syscalls")
 	SYSCALL(IOSC_SetOwnership),          //0x0071
 	SYSCALL(IOSC_GetOwnership),          //0x0072
 	SYSCALL_NULL,                        //0x0073
-	SYSCALL_NULL,                        //0x0074
+	SYSCALL(IOSC_GenerateKey),           //0x0074
 	SYSCALL_NULL,                        //0x0075
 	SYSCALL_NULL,                        //0x0076
 	SYSCALL_NULL,                        //0x0077

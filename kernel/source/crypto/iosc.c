@@ -1395,4 +1395,153 @@ s32 IOSC_GetOwnership(u32 keyHandle, u32* ownershipOut)
 	return ret;
 }
 
+// PRNG state, mirroring IOS: a 16-byte AES key built from the SEEPROM PRNG
+// seed, a constant IV and a block counter.
+static u32 IOSC_PRNG_Initialized = 0;
+static u8 IOSC_PRNG_Key[0x10] ALIGNED(0x40) = { 0 };
+static u8 IOSC_PRNG_IV[0x10] ALIGNED(0x40) = { 0 };
+static u32 IOSC_PRNG_Counter = 0;
+
+// Encrypts one 16-byte block with the raw key through the AES engine.
+static s32 IOSC_PRNGEncryptBlock(const u8* key, const u8* iv, const u8* input, u8* output)
+{
+	if (((u32)input & 0x1F) != 0 || ((u32)output & 0x1F) != 0)
+		return -2016;
+
+	u8* keyBlob = (u8*)AllocateOnHeap(KernelHeapId, 0x10);
+	if (keyBlob == NULL)
+		return IPC_ENOMEM;
+	memcpy(keyBlob, key, 0x10);
+
+	IoctlvMessageData* messageData = (IoctlvMessageData*)AllocateOnHeap(KernelHeapId, 0x20);
+	if (messageData == NULL)
+	{
+		FreeOnHeap(KernelHeapId, keyBlob);
+		return IPC_ENOMEM;
+	}
+
+	messageData[0].Data = (void*)input;
+	messageData[0].Length = 0x10;
+	messageData[1].Data = keyBlob;
+	messageData[1].Length = 0x10;
+	messageData[2].Data = output;
+	messageData[2].Length = 0x10;
+	messageData[3].Data = (void*)iv;
+	messageData[3].Length = 0x10;
+
+	s32 ret = DispatchIoctlv(AES_STATIC_FILEDESC, AES_ENCRYPT, 2, 2, messageData);
+
+	// On success the AES engine owns keyBlob and messageData and frees them.
+	if (ret == IPC_SUCCESS)
+		return ret;
+
+	FreeOnHeap(KernelHeapId, keyBlob);
+	FreeOnHeap(KernelHeapId, messageData);
+	return ret;
+}
+
+// Generates `size` pseudo random bytes: AES-encrypts an incrementing counter
+// with a key derived from the SEEPROM PRNG seed.
+static s32 IOSC_GenerateRandomBytes(u8* output, u32 size)
+{
+	if (!IOSC_PRNG_Initialized)
+	{
+		memset(IOSC_PRNG_Key, 0, sizeof(IOSC_PRNG_Key));
+		memcpy(IOSC_PRNG_Key + 0xC, &IOSC_Information.rngSeed, sizeof(u32));
+		memset(IOSC_PRNG_IV, 0, sizeof(IOSC_PRNG_IV));
+		IOSC_PRNG_IV[0] = 1;
+		IOSC_PRNG_Initialized = 1;
+	}
+
+	s32 ret = IPC_SUCCESS;
+	u32 written = 0;
+	u8 block[0x10] ALIGNED(0x20) = { 0 };
+	while (written < size)
+	{
+		IOSC_PRNG_Counter++;
+		memset(block, 0, sizeof(block));
+		block[0] = (u8)(IOSC_PRNG_Counter >> 24);
+		block[1] = (u8)(IOSC_PRNG_Counter >> 16);
+		block[2] = (u8)(IOSC_PRNG_Counter >> 8);
+		block[3] = (u8)(IOSC_PRNG_Counter);
+
+		ret = IOSC_PRNGEncryptBlock(IOSC_PRNG_Key, IOSC_PRNG_IV, block, block);
+		if (ret != IPC_SUCCESS)
+			return ret;
+
+		u32 chunk = size - written > sizeof(block) ? sizeof(block) : size - written;
+		memcpy(output + written, block, chunk);
+		written += chunk;
+	}
+
+	return ret;
+}
+
+// Generates new key material for an existing private keyslot.
+s32 IOSC_GenerateKey(u32 keyHandle)
+{
+	s32 ret = IPC_SUCCESS, keyRet = IPC_SUCCESS;
+	IOSC_BEGIN_SAFETY_WRAPPER(ret, keyRet)
+
+	do
+	{
+		// only custom slots, never the root key
+		if (keyHandle < 12 || keyHandle == RSA4096_ROOTKEY)
+		{
+			ret = IOSC_EACCES;
+			break;
+		}
+
+		keyRet = IOSC_CheckCurrentProcessOwnsKey(keyHandle);
+		if (keyRet != IPC_SUCCESS)
+			break;
+
+		u32 keySize = 0;
+		ret = Keyring_FindKeySize(&keySize, keyHandle);
+		if (ret != IPC_SUCCESS)
+			break;
+
+		KeyType keyType;
+		KeySubtype keySubtype;
+		Keyring_GetKeyTypes(keyHandle, &keyType, &keySubtype);
+		if (keyType != PrivateKey && keyType != PublicAndPrivateKey)
+		{
+			ret = IOSC_INVALID_OBJTYPE;
+			break;
+		}
+
+		if (keySubtype == ECC_233)
+		{
+			//TODO: PublicAndPrivateKey keys also need their ECC public key derived
+			if (keyType != PrivateKey)
+			{
+				ret = IOSC_FAIL_INTERNAL;
+				break;
+			}
+		}
+		else if (keySubtype != AES_128 && keySubtype != HMAC)
+		{
+			ret = IOSC_INVALID_OBJTYPE;
+			break;
+		}
+
+		u8 randomBytes[0x1e] ALIGNED(0x20) = { 0 };
+		ret = IOSC_GenerateRandomBytes(randomBytes, sizeof(randomBytes));
+		if (ret != IPC_SUCCESS)
+			break;
+
+		// HMAC keys only use the first 0x14 bytes
+		if (keySubtype == HMAC)
+			memset(randomBytes + 0x14, 0, sizeof(randomBytes) - 0x14);
+
+		ret = Keyring_SetKey(keyHandle, randomBytes, keySize);
+		if (ret != IPC_SUCCESS)
+			ret = IOSC_FAIL_INTERNAL;
+	}
+	while (0);
+
+	IOSC_END_SAFETY_WRAPPER(ret, keyRet)
+	return ret;
+}
+
 #endif
