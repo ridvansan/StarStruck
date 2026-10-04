@@ -1359,7 +1359,9 @@ s32 IOSC_SetOwnership(u32 keyHandle, u32 pidMask)
 		if (ret != IPC_SUCCESS)
 			break;
 
-		owner |= pidMask | (1 << (CurrentThread->ProcessId & 0xff));
+		//keep existing owners, mask off the low 3 pid bits (kernel processes)
+		//and always add the current process
+		owner |= (pidMask & 0xfffffff8) | (1 << (CurrentThread->ProcessId & 0xff));
 		ret = Keyring_SetKeyOwnerProcess(keyHandle, owner);
 	}
 	while (0);
@@ -1376,6 +1378,11 @@ s32 IOSC_GetOwnership(u32 keyHandle, u32* ownershipOut)
 
 	do
 	{
+		// Only the owner of a key can query its ownership mask (root key is always allowed)
+		keyRet = IOSC_CheckCurrentProcessOwnsKey(keyHandle);
+		if (keyRet != IPC_SUCCESS)
+			break;
+
 		ret = IOSC_CheckCurrentProcessCanReadWrite(ownershipOut, sizeof(u32));
 		if (ret != IPC_SUCCESS)
 			break;
