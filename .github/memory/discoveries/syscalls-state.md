@@ -95,8 +95,8 @@ Two files must be updated together:
 | 0x6E | GenerateBlockMACAsync | ✅ | ✅ `OSIOSCGenerateBlockMACAsync` |
 | 0x6F | ImportCertificate | ❌ `SYSCALL_NULL` | ❌ no wrapper |
 | 0x70 | GetDeviceCertificate | ❌ `SYSCALL_NULL` | ❌ no wrapper |
-| 0x71 | SetOwnership | ❌ `SYSCALL_NULL` | ❌ no wrapper |
-| 0x72 | GetOwnership | ❌ `SYSCALL_NULL` | ❌ no wrapper |
+| 0x71 | SetOwnership | ✅ `SYSCALL(IOSC_SetOwnership)` | ✅ `OSIOSCSetOwnership` |
+| 0x72 | GetOwnership | ✅ `SYSCALL(IOSC_GetOwnership)` | ✅ `OSIOSCGetOwnership` |
 | 0x73 | (unknown/unused) | `SYSCALL_NULL` | No known IOS function at this slot |
 | 0x74 | GenerateKey | ❌ `SYSCALL_NULL` | ❌ no wrapper |
 | 0x75 | GeneratePublicKeySign | ❌ `SYSCALL_NULL` | ❌ no wrapper |

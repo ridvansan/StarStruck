@@ -119,6 +119,12 @@ s32 OSIOSCGenerateHashAsync(ShaContext* context, const void* inputData, u32 inpu
 s32 OSIOSCComputeSharedKey(u32 privateKeyHandle, u32 publicKeyHandle, u32 sharedKeyHandle);
 s32 OSIOSCSetOwnership(u32 keyHandle, u32 pidMask);
 s32 OSIOSCGetOwnership(u32 keyHandle, u32* ownershipOut);
+s32 OSIOSCVerifyPublicKeySign(const void* data, u32 size, u32 keyHandle, const void* sig);
+s32 OSIOSCImportCertificate(const void* cert, u32 signerHandle, u32 pubKeyHandle);
+s32 OSIOSCGetDeviceCertificate(void* certOut);
+s32 OSIOSCGenerateKey(u32 keyHandle);
+s32 OSIOSCGeneratePublicKeySign(const void* hash, u32 hashLen, u32 keyHandle, void* sigOut);
+s32 OSIOSCGenerateCertificate(u32 keyHandle, const char* name, void* certOut);
 
 // Special IOS syscall to print something to debug device
 void OSPrintk(const char* str);

@@ -40,3 +40,13 @@ typedef struct
 CHECK_SIZE(TitleUIDEntry, 0x0C);
 CHECK_OFFSET(TitleUIDEntry, 0x00, Title);
 CHECK_OFFSET(TitleUIDEntry, 0x08, UserId);
+
+// Currently-running title state. Only the fields needed by the crypto code
+// are modeled so far; the full struct gets filled in during the launch step.
+typedef struct
+{
+	u8 Padding[0x1DC];
+	TitleID Title;
+} ActiveTitleContext;
+CHECK_SIZE(ActiveTitleContext, 0x1E4);
+CHECK_OFFSET(ActiveTitleContext, 0x1DC, Title);
