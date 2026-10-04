@@ -50,3 +50,92 @@ typedef struct
 } ActiveTitleContext;
 CHECK_SIZE(ActiveTitleContext, 0x1E4);
 CHECK_OFFSET(ActiveTitleContext, 0x1DC, Title);
+
+typedef enum
+{
+	RSA4096_SHA1 = 0x10000,
+	RSA2048_SHA1 = 0x10001,
+	ECDSA_SHA1 = 0x10002,
+} SignatureType;
+
+typedef struct
+{
+	SignatureType Type;
+	u8 Signature[256];
+	u8 Padding[60];
+	char Issuer[64];
+} SignatureRSA2048;
+CHECK_SIZE(SignatureRSA2048, 0x180);
+
+typedef struct
+{
+	SignatureType Type;
+	u8 Signature[512];
+	u8 Padding[60];
+	char Issuer[64];
+} SignatureRSA4096;
+CHECK_SIZE(SignatureRSA4096, 0x280);
+
+typedef struct
+{
+	SignatureType Type;
+	u8 Signature[60];
+	u8 Padding[64];
+	char Issuer[64];
+} SignatureECDSA;
+CHECK_SIZE(SignatureECDSA, 0xC0);
+
+// Type is the public key type: 1 = RSA-2048, 2 = ECC-233
+typedef struct
+{
+	u32 Type;
+	char Name[64];
+	u32 KeyId;
+} CertificateHeader;
+CHECK_SIZE(CertificateHeader, 0x48);
+
+typedef struct
+{
+	SignatureRSA2048 Signature;
+	CertificateHeader Header;
+	u8 PublicKey[256];
+	u8 Padding[0x38];
+} SignerCert;
+CHECK_SIZE(SignerCert, 0x300);
+
+typedef struct
+{
+	SignatureRSA2048 Signature;
+	CertificateHeader Header;
+	u8 PublicKey[60];
+	u8 Padding[0x3C];
+} SignerCertEcc;
+CHECK_SIZE(SignerCertEcc, 0x240);
+
+typedef struct
+{
+	SignatureRSA4096 Signature;
+	CertificateHeader Header;
+	u8 PublicKey[256];
+	u8 Padding[0x38];
+} CACert;
+CHECK_SIZE(CACert, 0x400);
+
+typedef struct
+{
+	SignatureECDSA Signature;
+	CertificateHeader Header;
+	u8 PublicKey[60];
+	u8 Padding[60];
+} ECCCert;
+CHECK_SIZE(ECCCert, 0x180);
+
+typedef union
+{
+	SignerCert Signer;
+	SignerCertEcc SignerEcc;
+	CACert Ca;
+	ECCCert Ecc;
+	u8 Raw[0x400];
+} Certificate;
+CHECK_SIZE(Certificate, 0x400);

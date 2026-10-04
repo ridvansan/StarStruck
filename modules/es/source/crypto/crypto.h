@@ -16,9 +16,26 @@
 
 #define ES_EINVAL -1017
 #define ES_EACCES -1026
+#define ES_CERT_KEYTYPE -1005
+#define ES_CERT_READERROR -1009
+#define ES_CERT_CONTAINER -1012
+#define ES_CERT_NOTFOUND -1027
+#define ES_ENOMEM -1024
+
+#define CERT_STORE_PATH "/sys/cert.sys"
 
 // The currently-running title, used to map the caller uid to the active title.
 extern ActiveTitleContext* g_ActiveTitleContext;
+
+// Walks a certificate buffer and finds the certificate matching `name`.
+// For signer certificates the caller can request matching against
+// "issuer-name" instead of just the certificate name (compareIssuer != 0).
+s32 CertificateSearchFunction(const char* name, const void* buffer, u32 size,
+                              Certificate** certificateOut, u32* entrySizeOut,
+                              const char** issuerOut, bool compareIssuer);
+
+// Adds a certificate to /sys/cert.sys if it is not stored yet.
+s32 UpdateCertificateStore(const char* certificateName, const void* certificate, u32 certificateSize);
 
 // Checks whether the given uid is allowed to use the given IOSC keyslot.
 s32 CheckKeyslotPermissions(u32 uid, u32 keyHandle);

@@ -39,7 +39,23 @@ thunks (`bx pc; nop` + ARM `b`) jump into them.
 - `CheckKeyslotPermissions(uid, keyHandle)`
 - `Encrypt` / `Decrypt` (ioctlv 0x2c / 0x2d)
 - Thin wrappers: `IOSCSetData`, `IOSCEncrypt`, `IOSCGetDeviceCertificate`
+- `CertificateSearchFunction` — walks a cert buffer, builds the cert name
+  (`"%s"` or `"%s-%s"` with issuer) and matches, including the "AP" prefix
+  shortcut. Types: RSA4096 (CA, 0x400), RSA2048 (0x300 RSA / 0x240 ECC),
+  ECDSA (0x180). Errors: -1005 bad key type, -1012 unsupported container,
+  -1027 not found.
+- `UpdateCertificateStore` — reads `/sys/cert.sys`, searches for the cert and
+  appends + rewrites the file with `CreateAndWriteFile` when missing.
+- Certificate/type definitions added to `modules/es/source/types.h`
+  (`SignatureType`, `SignatureRSA2048/4096`, `SignatureECDSA`,
+  `CertificateHeader`, `SignerCert`, `SignerCertEcc`, `CACert`, `ECCCert`,
+  `Certificate` union).
 - `ActiveTitleContext` skeleton (Title at +0x1DC) and `g_ActiveTitleContext`
+
+Verified with the matching loop (`~/starstruck-emu/matching/run-matching.sh`):
+call sequences match the original for the crypto wrappers, and the cert
+search/store functions follow the decompiled control flow (sizes differ due
+to the newer compiler; formatting helpers differ: strlcpy/strlcat vs sprintf).
 
 ## Decompiled behavior notes
 
