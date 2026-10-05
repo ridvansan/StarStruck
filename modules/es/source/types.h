@@ -43,13 +43,7 @@ CHECK_OFFSET(TitleUIDEntry, 0x08, UserId);
 
 // Currently-running title state. Only the fields needed by the crypto code
 // are modeled so far; the full struct gets filled in during the launch step.
-typedef struct
-{
-	u8 Padding[0x1DC];
-	TitleID Title;
-} ActiveTitleContext;
-CHECK_SIZE(ActiveTitleContext, 0x1E4);
-CHECK_OFFSET(ActiveTitleContext, 0x1DC, Title);
+// Removed: redefined after the TMD types below.
 
 typedef enum
 {
@@ -139,3 +133,96 @@ typedef union
 	u8 Raw[0x400];
 } Certificate;
 CHECK_SIZE(Certificate, 0x400);
+
+typedef struct
+{
+	u32 ContentId;
+	u16 Index;
+	u16 Type;
+	u64 Size;
+	u8 Sha1Hash[20];
+} __attribute__((packed)) TitleMetadataContent;
+CHECK_SIZE(TitleMetadataContent, 0x24);
+
+typedef struct
+{
+	SignatureRSA2048 SignedBlobHeader;  // +0x000
+	u8 Version;                         // +0x180
+	u8 CaCrlVersion;                    // +0x181
+	u8 SignerCrlVersion;                // +0x182
+	bool IsVwiiTitle;                   // +0x183
+	u64 RequiredSystemVersion;          // +0x184
+	u64 TitleId;                        // +0x18c
+	u32 TitleType;                      // +0x194
+	u16 GroupId;                        // +0x198
+	u16 Padding;                        // +0x19a
+	u16 Region;                         // +0x19c
+	u8 Ratings[16];                     // +0x19e
+	u8 Reserved[12];                    // +0x1ae
+	u8 IpcMask[12];                     // +0x1ba
+	u8 Reserved2[18];                   // +0x1c6
+	u32 AccessRights;                   // +0x1d8
+	u16 TitleVersion;                   // +0x1dc
+	u16 ContentCount;                   // +0x1de
+	u16 BootIndex;                      // +0x1e0
+	u16 MinorVersion;                   // +0x1e2
+	TitleMetadataContent Contents[512]; // +0x1e4
+} __attribute__((packed)) TitleMetadata;
+CHECK_SIZE(TitleMetadata, 0x1E4 + 512 * 0x24);
+CHECK_OFFSET(TitleMetadata, 0x180, Version);
+CHECK_OFFSET(TitleMetadata, 0x184, RequiredSystemVersion);
+CHECK_OFFSET(TitleMetadata, 0x18c, TitleId);
+CHECK_OFFSET(TitleMetadata, 0x194, TitleType);
+CHECK_OFFSET(TitleMetadata, 0x198, GroupId);
+CHECK_OFFSET(TitleMetadata, 0x19a, Padding);
+CHECK_OFFSET(TitleMetadata, 0x1dc, TitleVersion);
+CHECK_OFFSET(TitleMetadata, 0x1de, ContentCount);
+CHECK_OFFSET(TitleMetadata, 0x1e0, BootIndex);
+CHECK_OFFSET(TitleMetadata, 0x1e4, Contents);
+
+typedef struct
+{
+	u32 ContentId;
+	u16 Index;
+	u16 Type;
+	u64 Size;
+} TitleMetadataViewContent;
+CHECK_SIZE(TitleMetadataViewContent, 0x10);
+
+typedef struct
+{
+	u8 Version;                 // +0x00
+	u8 Padding[3];
+	u64 SystemVersion;          // +0x04
+	u64 TitleId;                // +0x0c
+	u32 TitleType;              // +0x14
+	u16 GroupId;                // +0x18
+	u8 Unknown1[62];            // +0x1a
+	u16 TitleVersion;           // +0x58
+	u16 NumContents;            // +0x5a
+	TitleMetadataViewContent Contents[512]; // +0x5c
+} __attribute__((packed)) TitleMetadataView;
+CHECK_SIZE(TitleMetadataView, 0x5C + 512 * 0x10);
+CHECK_OFFSET(TitleMetadataView, 0x00, Version);
+CHECK_OFFSET(TitleMetadataView, 0x04, SystemVersion);
+CHECK_OFFSET(TitleMetadataView, 0x0c, TitleId);
+CHECK_OFFSET(TitleMetadataView, 0x14, TitleType);
+CHECK_OFFSET(TitleMetadataView, 0x18, GroupId);
+CHECK_OFFSET(TitleMetadataView, 0x1a, Unknown1);
+CHECK_OFFSET(TitleMetadataView, 0x58, TitleVersion);
+CHECK_OFFSET(TitleMetadataView, 0x5a, NumContents);
+CHECK_OFFSET(TitleMetadataView, 0x5c, Contents);
+
+// Currently-running title state.
+typedef struct
+{
+	u32 Unknown;                // +0x00
+	TitleMetadata* Tmd;         // +0x04
+	u32 IsActive;               // +0x08
+	u8 Padding[0x1DC - 0x0C];
+	TitleID Title;              // +0x1DC
+} ActiveTitleContext;
+CHECK_SIZE(ActiveTitleContext, 0x1E4);
+CHECK_OFFSET(ActiveTitleContext, 0x04, Tmd);
+CHECK_OFFSET(ActiveTitleContext, 0x08, IsActive);
+CHECK_OFFSET(ActiveTitleContext, 0x1DC, Title);

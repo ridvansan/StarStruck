@@ -12,15 +12,8 @@
 
 #include <types.h>
 
+#include "errors.h"
 #include "types.h"
-
-#define ES_EINVAL -1017
-#define ES_EACCES -1026
-#define ES_CERT_KEYTYPE -1005
-#define ES_CERT_READERROR -1009
-#define ES_CERT_CONTAINER -1012
-#define ES_CERT_NOTFOUND -1027
-#define ES_ENOMEM -1024
 
 #define CERT_STORE_PATH "/sys/cert.sys"
 
